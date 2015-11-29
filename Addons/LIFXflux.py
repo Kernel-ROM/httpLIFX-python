@@ -1,4 +1,4 @@
-import sys, requests, re, os
+import sys, requests, re, os, time
 sys.path.append("..")
 import httpLIFX as LIFX
 try:
@@ -8,7 +8,7 @@ except ImportError:
 
 def cityToLL(string):
 	# Hide me!
-	key = "YOUR_TOKEN_HERE"
+	key = "YOUR_KEY_HERE"
 	url = "https://maps.googleapis.com/maps/api/geocode/json?address=%s&key=%s" % (string, key)
 	response = makeRequest(url)
 	latlng = [0, 0]
@@ -28,6 +28,7 @@ def configConstructor(path):
 	config.set("Settings", "Longitude", "")
 	config.set("Settings", "Sunset", "")
 	config.set("Settings", "Timeout", "")
+	config.set("Settings", "LastUpdate", "")
  
 	with open(path, "w") as config_file:
 		config.write(config_file)
@@ -37,13 +38,17 @@ def getIniValues(iniName, settings):
 	config = ConfigParser()
 	config.read(iniName)
 	value = []
-	for i in range(len(settings)-1):
-		value.append(config.get("Settings", setting[i]))
+	for i in range(len(settings)):
+		value.append(config.get("Settings", settings[i]))
 	return value
 
 def kelvinKiller(iniName):
-	settings = ["Timeout", ]
-	getIniValues(iniName, settings)
+	settings = ["Timeout", "Sunset", "LastUpdate"]
+	values = getIniValues(iniName, settings)
+	
+	if values[2] != time.strftime("%d/%m/%Y"):
+		updateSundown(iniName)
+
 	return
 
 def makeRequest(url, data=""):
@@ -84,7 +89,8 @@ def setup(iniName):
 	response2 = raw_input("> ")
 	response2 = LIFX.clamp(int(response2), 0, 60)
 	values.append(response2)
-	settings = ["Address", "Latitude", "Longitude", "Sunset", "Timeout"]
+	values.append(time.strftime("%d/%m/%Y"))
+	settings = ["Address", "Latitude", "Longitude", "Sunset", "Timeout", "LastUpdate"]
 	setIniVals(iniName, settings, values)
 	print settings, values
 	return
@@ -94,6 +100,18 @@ def sundown(lat, lng):
 	sd = sd.json()
 	sd = sd["results"]
 	return str(sd["sunset"])
+
+def updateSundown(iniName):
+	settings = ["Address"]
+	values = []
+	response = getIniValues(iniName, settings)
+	latlng = cityToLL(response[0])
+	sd = sundown(latlng[0],latlng[1])
+	values.append(sd)
+	values.append(time.strftime("%d/%m/%Y"))
+	settings.append("LastUpdate")
+	setIniVals(iniName, settings, values)
+	return
 
 def main():
 	iniName = "flux.ini"
