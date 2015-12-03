@@ -1,6 +1,6 @@
 import sys, requests, re, os, time
 sys.path.append("..")
-import httpLIFX as LIFX
+import httpLIFX as pyFX
 try:
     from configparser import ConfigParser
 except ImportError:
@@ -29,6 +29,8 @@ def configConstructor(path):
 	config.set("Settings", "Sunset", "")
 	config.set("Settings", "Timeout", "")
 	config.set("Settings", "LastUpdate", "")
+	config.set("Settings", "DayKelvin", "")
+	config.set("Settings", "NightKelvin", "")
  
 	with open(path, "w") as config_file:
 		config.write(config_file)
@@ -43,11 +45,14 @@ def getIniValues(iniName, settings):
 	return value
 
 def kelvinKiller(iniName):
-	settings = ["Timeout", "Sunset", "LastUpdate"]
+	settings = ["Timeout", "Sunset", "LastUpdate", "DayKelvin", "NightKelvin"]
 	values = getIniValues(iniName, settings)
 	
 	if values[2] != time.strftime("%d/%m/%Y"):
 		updateSundown(iniName)
+	for i in range(int(values[0])):
+		pyFX.changeKelvin(value, 2)
+	
 
 	return
 
@@ -56,7 +61,7 @@ def makeRequest(url, data=""):
 		response = requests.get(url+data)
 	except:
 		print "Connection failed."
-	pattern = re.compile("20\d")
+	pattern = re.compile("200")
 	if not pattern.match(str(response.status_code)):
 		print "ERROR: " + response.status_code
 		print response.json()
@@ -76,23 +81,38 @@ def setIniVals(iniName, settings, values):
 	return
 
 def setup(iniName):
-	print "Please enter your nearest town or city:"
-	values = []
-	response = raw_input("> ")
-	latlng = cityToLL(response)
-	values.append(response)
-	values.append(latlng[0])
-	values.append(latlng[1])
-	sd = sundown(latlng[0],latlng[1])
-	values.append(sd)
-	print "Please enter how long the light fade should be in mins [0-60]"
-	response2 = raw_input("> ")
-	response2 = LIFX.clamp(int(response2), 0, 60)
-	values.append(response2)
-	values.append(time.strftime("%d/%m/%Y"))
-	settings = ["Address", "Latitude", "Longitude", "Sunset", "Timeout", "LastUpdate"]
-	setIniVals(iniName, settings, values)
-	print settings, values
+	try:
+		print "Please enter your nearest town or city:"
+		values = []
+		response = raw_input("> ")
+		latlng = cityToLL(response)
+		if latlng[0] == 0 or latlng[1] == 0:
+			print "Google API error!"
+			return
+		values.append(response)
+		values.append(latlng[0])
+		values.append(latlng[1])
+		sd = sundown(latlng[0],latlng[1])
+		values.append(sd)
+		print "Please enter how long the light fade should be in mins [0-60]"
+		response2 = raw_input("> ")
+		response2 = pyFX.clamp(int(response2), 0, 60)
+		values.append(response2)
+		values.append(time.strftime("%d/%m/%Y"))
+		print "Please enter daytime temperature, default is 5000 [2500-9000]"
+		response3 = raw_input("> ")
+		response3 = pyFX.clamp(int(response3), 2500, 9000)
+		values.append(response3)
+		print "Please enter nighttime temperature, default is 3400 [2500-9000]"
+		response4 = raw_input("> ")
+		response4 = pyFX.clamp(int(response4), 2500, 9000)
+		values.append(response4)
+		settings = ["Address", "Latitude", "Longitude", "Sunset", "Timeout", "LastUpdate", "DayKelvin", "NightKelvin"]
+		setIniVals(iniName, settings, values)
+		print settings, values
+	except:
+		print "Error!"
+		return
 	return
 
 def sundown(lat, lng):

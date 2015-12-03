@@ -67,12 +67,12 @@ def commands(Clist):
 			pattern = re.compile("\d{1,5}k")
 			if pattern.match(Clist[i]):
 				changeKelvin(Clist[i], 1)
-				break
-			v = makeRequest("color?string="+Clist[i], "GET")
-			if v.status_code == 200:
-				changeColour(Clist[i], 2)
-			elif v.status_code == 422:
-				print "Unknown Colour!"
+			else:
+				v = makeRequest("color?string="+Clist[i], "GET")
+				if v.status_code == 200:
+					changeColour(Clist[i], 2)
+				elif v.status_code == 422:
+					print "Unknown Colour!"
 		else:
 			print "Unknown command!"
 	return
