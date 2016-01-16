@@ -140,6 +140,9 @@ def power(option):
 			else:
 				print "Powering off..."
 				makeRequest("lights/all/toggle", "POST")
+	# Use this option to toggle the power
+	elif option == 2:
+		makeRequest("lights/all/toggle", "POST")
 	return
 
 # Initiates LIFX
