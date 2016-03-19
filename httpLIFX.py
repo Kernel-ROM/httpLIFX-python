@@ -83,15 +83,15 @@ def commands():
         else:
             print "Unknown command!"
 
+    if args.toggle:
+        powerToggle()
+
     if args.colour:
         v = makeRequest("color?string=" + args.colour, "GET")
         if v.status_code == 200:
             changeColour(args.colour, 2)
         elif v.status_code == 422:
             print "Unknown Colour!"
-
-    if args.toggle:
-        powerToggle()
 
     if args.brightness:
         changeBrightness(args.brightness)
