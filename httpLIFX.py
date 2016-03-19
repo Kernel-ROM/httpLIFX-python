@@ -30,7 +30,6 @@ def changeColour(colour, delay):
 
 def changeKelvin(value, delay):
     """Change warmth of bulb in degrees kelvin."""
-    value = value[:-1]
     value = clamp(int(value), 2500, 9000)
     print "Changing kelvin to: %sk" % value
     data = {
@@ -64,12 +63,20 @@ def clamp(n, minn, maxn):
 
 def commands():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description='Process input commands.')
-    parser.add_argument('--power', '-p', help='ON/OFF')
-    parser.add_argument('--colour', '-c', help='Change colour of bulb.')
-    parser.add_argument('--toggle', '-t', help='Toggle power state.', action='store_true')
-    parser.add_argument('--brightness', '-b', help='Value as a percentage.', type=int)
-    parser.add_argument('--kelvin', '-k', help='Between 2500 & 9000.', type=int)
+    parser = argparse.ArgumentParser(
+        description='Connect to the LIFX HTTP API & control your bulb over the internet.',
+        formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=45))
+
+    parser.add_argument('-p', '--power',
+                        help='Valid choices are ON/OFF/TOGGLE')
+    parser.add_argument('-c', '--colour',
+                        help='Change colour of bulb(s).')
+    parser.add_argument('-t', '--toggle',
+                        help='Toggle power state.', action='store_true')
+    parser.add_argument('-b', '--brightness',
+                        help='Brightness value as a percentage.', type=int)
+    parser.add_argument('-k', '--kelvin',
+                        help='Warmth value between 2500 & 9000.', type=int)
 
     args = parser.parse_args()
 
@@ -187,8 +194,8 @@ def powerToggle():
     return
 
 
-# Initiates LIFX
 def main():
+    """Initiate LIFX."""
     if checkOnline():
         commands()
     else:
