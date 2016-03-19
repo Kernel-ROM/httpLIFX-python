@@ -1,8 +1,9 @@
-"""python LIFX HTTP API used to control your bulb over the internet."""
+"""Connect to the LIFX HTTP API & control your bulb over the internet."""
 import requests
 import sys
 import time
 import re
+import argparse
 
 
 def changeBrightness(value):
@@ -61,36 +62,42 @@ def clamp(n, minn, maxn):
     return max(min(maxn, n), minn)
 
 
-def commands(Clist):
-    """Messy way of processing input arguments for LIFX commands."""
-    Clist.remove(sys.argv[0])
-    for i in range(len(Clist)):
-        if Clist[i].isdigit():
-            Clist[i] = int(Clist[i])
-        else:
-            Clist[i] = str(Clist[i])
-        if type(Clist[i]) == str:
-            Clist[i] = Clist[i].lower()
+def commands():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description='Process input commands.')
+    parser.add_argument('--power', '-p', help='ON/OFF')
+    parser.add_argument('--colour', '-c', help='Change colour of bulb.')
+    parser.add_argument('--toggle', '-t', help='Toggle power state.', action='store_true')
+    parser.add_argument('--brightness', '-b', help='Value as a percentage.', type=int)
+    parser.add_argument('--kelvin', '-k', help='Between 2500 & 9000.', type=int)
 
-    for i in range(len(Clist)):
-        if Clist[i] == "on":
+    args = parser.parse_args()
+
+    if args.power:
+        if args.power.upper() == "ON":
             power(1)
-        elif Clist[i] == "off":
+        elif args.power.upper() == "OFF":
             power(0)
-        elif type(Clist[i]) == int:
-            changeBrightness(Clist[i])
-        elif type(Clist[i]) == str:
-            pattern = re.compile("\d{1,5}k")
-            if pattern.match(Clist[i]):
-                changeKelvin(Clist[i], 1)
-            else:
-                v = makeRequest("color?string=" + Clist[i], "GET")
-                if v.status_code == 200:
-                    changeColour(Clist[i], 2)
-                elif v.status_code == 422:
-                    print "Unknown Colour!"
+        elif args.power.upper() == "TOGGLE":
+            powerToggle()
         else:
             print "Unknown command!"
+
+    if args.colour:
+        v = makeRequest("color?string=" + args.colour, "GET")
+        if v.status_code == 200:
+            changeColour(args.colour, 2)
+        elif v.status_code == 422:
+            print "Unknown Colour!"
+
+    if args.toggle:
+        powerToggle()
+
+    if args.brightness:
+        changeBrightness(args.brightness)
+
+    if args.kelvin:
+        changeKelvin(args.kelvin, 1)
     return
 
 
@@ -120,24 +127,31 @@ def makeRequest(url, Rtype, data=""):
         523: "Server Error!"
     }
     headers = {
-        "Authorization": "Bearer %s" % token
+        "Authorization": "Bearer %s" % token,
     }
-    url = "https://api.lifx.com/v1/" + url
+    requrl = "https://api.lifx.com/v1/" + url
+
     if Rtype.upper() == "GET":
         try:
-            response = requests.get(url, headers=headers)
+            response = requests.get(requrl, headers=headers)
         except:
-            print "Connection failed."
+            print "GET connection failed."
+            sys.exit(1)
+
     elif Rtype.upper() == "POST":
         try:
-            response = requests.post(url, json=data, headers=headers)
+            response = requests.post(requrl, json=data, headers=headers)
         except:
-            print "Connection failed."
+            print "POST connection failed."
+            sys.exit(1)
+
     elif Rtype.upper() == "PUT":
         try:
-            response = requests.put(url, json=data, headers=headers)
+            response = requests.put(requrl, json=data, headers=headers)
         except:
-            print "Connection failed."
+            print "PUT connection failed."
+            sys.exit(1)
+
     pattern = re.compile("20\d")
     if not pattern.match(str(response.status_code)):
         print statusCodes[response.status_code]
@@ -168,6 +182,7 @@ def power(option):
 
 def powerToggle():
     """Toggle bulb power state."""
+    print "Toggling power..."
     makeRequest("lights/all/toggle", "POST")
     return
 
@@ -175,7 +190,7 @@ def powerToggle():
 # Initiates LIFX
 def main():
     if checkOnline():
-        commands(sys.argv)
+        commands()
     else:
         sys.exit(1)
 
